@@ -1,38 +1,1138 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Menú Interactivo & Impacto Ambiental</title>
-  <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huella Oculta: Simulador Hidrológico | UAM Lerma</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        aqua: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        },
+                        eco: {
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom UI Glassmorphism & Canvas overlays */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.25);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.3);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.6);
+        }
+        /* Heatwave canvas distortion pulse */
+        @keyframes pulse-heat {
+            0%, 100% { opacity: 0.15; }
+            50% { opacity: 0.35; }
+        }
+        .heatwave-overlay {
+            animation: pulse-heat 2s infinite ease-in-out;
+        }
+    </style>
 </head>
-<body>
+<body class="h-full bg-slate-950 text-slate-100 font-sans antialiased overflow-x-hidden flex flex-col selection:bg-cyan-500 selection:text-slate-950">
 
-  <!-- Fondo animado con movimiento de gradiente y partículas/ondas -->
-  <div class="bg-animated"></div>
+    <!-- Top Header / Academic Branding -->
+    <header class="w-full bg-slate-900/80 border-b border-slate-800/80 px-4 py-2.5 flex items-center justify-between shrink-0 z-30">
+        <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <i class="fa-solid font-bold fa-droplet text-slate-950 text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-extrabold text-base tracking-tight bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
+                    Huella Oculta <span class="text-xs font-normal text-slate-400">v2.5</span>
+                </h1>
+                <p class="text-[10px] text-slate-400 font-mono tracking-wide uppercase">Simulador Hidrológico &bull; UAM Lerma</p>
+            </div>
+        </div>
 
-  <header class="hero">
-    <h1>Explora Nuestro Menú Consciente 🥑💧</h1>
-    <p>Descubre el valor nutricional y el impacto hídrico de cada alimento.</p>
-  </header>
+        <div class="flex items-center space-x-2">
+            <button id="btn-audio-toggle" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-xs flex items-center space-x-1.5 border border-slate-700">
+                <i class="fa-solid fa-volume-high text-cyan-400" id="audio-icon"></i>
+                <span class="hidden sm:inline text-[11px]">Audio</span>
+            </button>
+            <button id="btn-telemetry-modal" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-xs flex items-center space-x-1.5 border border-slate-700">
+                <i class="fa-solid fa-chart-line text-emerald-400"></i>
+                <span class="hidden sm:inline text-[11px]">Telemetría</span>
+            </button>
+            <button id="btn-restart" class="p-2 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/50 transition text-xs flex items-center space-x-1">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+    </header>
 
-  <main class="container">
-    <!-- Filtros de categoría e impacto -->
-    <div class="filter-bar">
-      <button class="filter-btn active" data-filter="all">Todos</button>
-      <button class="filter-btn" data-filter="Natural">Naturales</button>
-      <button class="filter-btn" data-filter="Procesado">Procesados</button>
-      <button class="filter-btn" data-filter="low-water">Baja Huella Hídrica 💧</button>
-      <button class="filter-btn" data-filter="high-protein">Alto en Proteína 💪</button>
+    <!-- Main Content Container -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden relative">
+        
+        <!-- Left Column: Simulation Canvas & Village Stage (7 cols) -->
+        <section class="lg:col-span-7 flex flex-col h-[52vh] lg:h-full relative border-r border-slate-800/80 bg-slate-950 overflow-hidden">
+            
+            <!-- Canvas Environment -->
+            <div class="relative flex-1 w-full h-full overflow-hidden">
+                <canvas id="simCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+                
+                <!-- Atmospheric Overlays -->
+                <div id="heatOverlay" class="pointer-events-none absolute inset-0 bg-gradient-to-t from-orange-600/20 via-amber-500/10 to-transparent opacity-0 transition-opacity duration-1000 heatwave-overlay"></div>
+                <div id="rainOverlay" class="pointer-events-none absolute inset-0 bg-cyan-900/20 opacity-0 transition-opacity duration-1000"></div>
+
+                <!-- Floating HUD Badges inside Canvas -->
+                <div class="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-none z-10">
+                    <!-- Day & Climate Tag -->
+                    <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center space-x-3 text-xs pointer-events-auto shadow-xl">
+                        <div class="flex items-center space-x-1.5">
+                            <i class="fa-regular fa-calendar-check text-cyan-400"></i>
+                            <span class="font-mono font-bold text-slate-200">Día <span id="hud-day">1</span></span>
+                        </div>
+                        <div class="h-3 w-px bg-slate-700"></div>
+                        <div id="hud-climate-badge" class="flex items-center space-x-1 text-emerald-400 font-medium">
+                            <i class="fa-solid fa-sun text-amber-400"></i>
+                            <span id="hud-climate-text" class="text-[11px]">Templado</span>
+                        </div>
+                    </div>
+
+                    <!-- Event Trigger Notification Toast -->
+                    <div id="event-toast" class="hidden glass-panel px-3 py-1.5 rounded-xl border border-amber-500/40 text-amber-300 text-xs flex items-center space-x-2 animate-bounce shadow-2xl">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                        <span id="event-toast-msg" class="font-semibold text-[11px]">OLA DE HÁBITAT: OLA DE CALOR (+50% HUELLA)</span>
+                    </div>
+                </div>
+
+                <!-- Bottom Aquifer Status Bar Overlay -->
+                <div class="absolute bottom-3 left-3 right-3 glass-panel p-3 rounded-2xl flex flex-col space-y-2 pointer-events-auto z-10 shadow-2xl">
+                    <div class="flex justify-between items-center text-xs">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-water text-cyan-400"></i>
+                            <span class="font-semibold text-slate-200">Reserva de Acuífero Subterráneo</span>
+                        </div>
+                        <div class="font-mono text-[11px] text-cyan-300">
+                            <span id="hud-water-val" class="font-bold text-sm">10,000</span> L / <span class="text-slate-400">10,000 L</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-slate-800/90 h-3 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
+                        <div id="aquifer-bar" class="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full transition-all duration-500 w-full relative">
+                            <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Row -->
+                    <div class="grid grid-cols-3 gap-2 pt-1 text-[11px] font-mono border-t border-slate-800/80">
+                        <div class="flex items-center justify-between px-2 py-1 rounded bg-slate-900/60">
+                            <span class="text-slate-400"><i class="fa-solid fa-heart text-red-400 mr-1"></i>Salud:</span>
+                            <span id="hud-health-val" class="text-red-300 font-bold">100%</span>
+                        </div>
+                        <div class="flex items-center justify-between px-2 py-1 rounded bg-slate-900/60">
+                            <span class="text-slate-400"><i class="fa-solid fa-leaf text-emerald-400 mr-1"></i>Eco-Conciencia:</span>
+                            <span id="hud-eco-val" class="text-emerald-300 font-bold">100 pts</span>
+                        </div>
+                        <div class="flex items-center justify-between px-2 py-1 rounded bg-slate-900/60">
+                            <span class="text-slate-400"><i class="fa-solid fa-users text-amber-400 mr-1"></i>Población:</span>
+                            <span id="hud-pop-val" class="text-amber-300 font-bold">8 habs</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Column: Dietary Decision Panel (5 cols) -->
+        <section class="lg:col-span-5 flex flex-col h-[48vh] lg:h-full bg-slate-900/60 overflow-hidden">
+            
+            <!-- Category Tabs Header -->
+            <div class="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex items-center space-x-1.5 overflow-x-auto shrink-0 no-scrollbar">
+                <button data-cat="all" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 transition shrink-0">
+                    <i class="fa-solid fa-border-all mr-1"></i>Todos (22)
+                </button>
+                <button data-cat="frutas" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition shrink-0">
+                    <i class="fa-solid fa-apple-whole mr-1 text-emerald-400"></i>Frutas y Verduras
+                </button>
+                <button data-cat="granos" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition shrink-0">
+                    <i class="fa-solid fa-wheat-awn mr-1 text-amber-400"></i>Granos y Semillas
+                </button>
+                <button data-cat="proteinas" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition shrink-0">
+                    <i class="fa-solid fa-drumstick-bite mr-1 text-red-400"></i>Proteínas y Lácteos
+                </button>
+                <button data-cat="procesados" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition shrink-0">
+                    <i class="fa-solid fa-cookie-bite mr-1 text-purple-400"></i>Procesados y Bebidas
+                </button>
+            </div>
+
+            <!-- Scientific Search & Filters -->
+            <div class="px-4 py-2 bg-slate-900/40 border-b border-slate-800/60 flex items-center justify-between text-xs gap-2">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500"></i>
+                    <input type="text" id="food-search" placeholder="Buscar alimento o nutriente..." class="w-full bg-slate-950/80 border border-slate-700/60 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
+                </div>
+                <div class="text-[11px] text-slate-400 font-mono hidden sm:block">
+                    Base de Datos UAM Lerma
+                </div>
+            </div>
+
+            <!-- Food Cards Grid -->
+            <div id="food-grid" class="flex-1 p-4 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
+                <!-- Food items generated dynamically by JS -->
+            </div>
+
+            <!-- Footer Quick Stats & Manual Controls -->
+            <div class="p-3 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between text-xs shrink-0">
+                <div class="flex items-center space-x-2 text-slate-400 text-[11px]">
+                    <i class="fa-solid fa-circle-info text-cyan-400"></i>
+                    <span>Haz clic en un alimento para alimentarlos o en <i class="fa-solid fa-circle-info text-slate-400"></i> para detalles científicos.</span>
+                </div>
+                <button id="btn-trigger-rain" class="px-2.5 py-1 rounded-lg bg-cyan-900/40 hover:bg-cyan-800/60 text-cyan-300 border border-cyan-700/50 text-[11px] transition flex items-center space-x-1 shrink-0">
+                    <i class="fa-solid fa-cloud-showers-heavy"></i>
+                    <span>Lluvia (+500L)</span>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL 1: Scientific Details Modal -->
+    <div id="modal-food-info" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+        <div class="glass-panel w-full max-w-md rounded-2xl border border-slate-700 p-6 shadow-2xl flex flex-col space-y-4 relative animate-in fade-in zoom-in duration-200">
+            <button id="close-food-modal" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="flex items-center space-x-3">
+                <div id="modal-food-icon" class="w-12 h-12 rounded-xl bg-cyan-950 border border-cyan-700/50 flex items-center justify-center text-2xl">
+                    🍎
+                </div>
+                <div>
+                    <h3 id="modal-food-title" class="font-bold text-lg text-slate-100">Manzana</h3>
+                    <span id="modal-food-category" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-cyan-300 font-mono">Frutas y Verduras</span>
+                </div>
+            </div>
+
+            <!-- Water Footprint Highlight -->
+            <div class="bg-slate-900/80 border border-cyan-500/30 rounded-xl p-3 flex justify-between items-center">
+                <div>
+                    <div class="text-[10px] text-slate-400 uppercase font-mono tracking-wider">Huella Hídrica Total</div>
+                    <div class="text-xl font-extrabold text-cyan-400 font-mono" id="modal-water-100g">82.2 L / 100g</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-[10px] text-slate-400 uppercase font-mono tracking-wider">Por Kilogramo</div>
+                    <div class="text-sm font-semibold text-slate-300 font-mono" id="modal-water-1kg">822 L / kg</div>
+                </div>
+            </div>
+
+            <!-- Nutritional Breakdown Table -->
+            <div class="space-y-2">
+                <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider font-mono">Composición Nutricional por 100g/ml</h4>
+                <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                    <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-800 flex justify-between">
+                        <span class="text-slate-400">Calorías:</span>
+                        <span id="modal-cal" class="text-amber-300 font-semibold">52 kcal</span>
+                    </div>
+                    <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-800 flex justify-between">
+                        <span class="text-slate-400">Proteínas:</span>
+                        <span id="modal-prot" class="text-red-300 font-semibold">0.3 g</span>
+                    </div>
+                    <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-800 flex justify-between">
+                        <span class="text-slate-400">Carbohidratos:</span>
+                        <span id="modal-carb" class="text-cyan-300 font-semibold">13.8 g</span>
+                    </div>
+                    <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-800 flex justify-between">
+                        <span class="text-slate-400">Grasas:</span>
+                        <span id="modal-fat" class="text-emerald-300 font-semibold">0.2 g</span>
+                    </div>
+                    <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-800 flex justify-between col-span-2">
+                        <span class="text-slate-400">Sodio:</span>
+                        <span id="modal-sodio" class="text-slate-200 font-semibold">1 mg</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scientific Context -->
+            <div class="text-xs text-slate-400 italic bg-slate-900/40 p-3 rounded-lg border border-slate-800/80">
+                <i class="fa-solid fa-quote-left text-cyan-500/40 mr-1"></i>
+                <span id="modal-description">Los datos provienen de los estudios de la Water Footprint Network e investigaciones hídricas adaptadas para UAM Lerma.</span>
+            </div>
+
+            <button id="modal-btn-consume" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/20 transition">
+                Consumir este Alimento
+            </button>
+        </div>
     </div>
 
-    <!-- Contenedor donde se cargarán las tarjetas -->
-    <div class="menu-grid" id="menuGrid">
-      <!-- Se genera dinámicamente con JS -->
-    </div>
-  </main>
+    <!-- MODAL 2: Telemetry & Thesis Data Log -->
+    <div id="modal-telemetry" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+        <div class="glass-panel w-full max-w-3xl rounded-2xl border border-slate-700 p-6 shadow-2xl flex flex-col space-y-4 max-h-[85vh] relative">
+            <button id="close-telemetry-modal" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
 
-  <script src="script.js"></script>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-microchip text-emerald-400 text-xl"></i>
+                    <div>
+                        <h3 class="font-bold text-base text-slate-100">Bitácora de Telemetría Hídrica</h3>
+                        <p class="text-xs text-slate-400">Registro de datos experimentales para tesis académica UAM Lerma</p>
+                    </div>
+                </div>
+                <button id="btn-export-csv" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-file-csv"></i>
+                    <span>Exportar CSV</span>
+                </button>
+            </div>
+
+            <!-- Telemetry Table -->
+            <div class="flex-1 overflow-y-auto border border-slate-800 rounded-xl bg-slate-950/60">
+                <table class="w-full text-left text-xs font-mono">
+                    <thead class="bg-slate-900 text-slate-400 sticky top-0 border-b border-slate-800">
+                        <tr>
+                            <th class="p-2.5">Día</th>
+                            <th class="p-2.5">Alimento Consumido</th>
+                            <th class="p-2.5">Agua Extraída</th>
+                            <th class="p-2.5">Nivel Acuífero</th>
+                            <th class="p-2.5">Salud Poblacional</th>
+                            <th class="p-2.5">Factor Clima</th>
+                        </tr>
+                    </thead>
+                    <tbody id="telemetry-tbody" class="divide-y divide-slate-800/60 text-slate-300">
+                        <!-- Telemetry logs populated via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="text-[11px] text-slate-500 flex justify-between items-center pt-2">
+                <span>Registros acumulados: <strong id="log-count" class="text-slate-300">0</strong></span>
+                <span>UAM Lerma &bull; División de Ciencias Biológicas y de la Salud</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           HUELLA OCULTA - HYDROLOGICAL SIMULATOR ENGINE (UAM LERMA RESEARCH)
+           ========================================================================== */
+
+        // 1. Scientific Food Dataset (22 Foods with Exact Water Footprint & Nutrition)
+        const FOOD_DATASET = [
+            // Frutas y Verduras
+            { id: 'manzana', name: 'Manzana', category: 'frutas', icon: '🍎', water100g: 82.2, water1kg: 822, cal: 52, prot: 0.3, carb: 13.8, fat: 0.2, sodio: 1, desc: 'Fruta fresca de alto consumo. Requiere irrigación moderada en huertos.' },
+            { id: 'platano', name: 'Plátano', category: 'frutas', icon: '🍌', water100g: 79.0, water1kg: 790, cal: 89, prot: 1.1, carb: 22.8, fat: 0.3, sodio: 1, desc: 'Cultivo tropical intensivo con demanda constante de agua de evapotranspiración.' },
+            { id: 'naranja', name: 'Naranja', category: 'frutas', icon: '🍊', water100g: 56.0, water1kg: 560, cal: 47, prot: 0.9, carb: 11.8, fat: 0.1, sodio: 0, desc: 'Cítrico con impacto hídrico moderado, principalmente en huertos comerciales.' },
+            { id: 'aguacate', name: 'Aguacate', category: 'frutas', icon: '🥑', water100g: 198.1, water1kg: 1981, cal: 160, prot: 2.0, carb: 8.5, fat: 14.7, sodio: 7, desc: 'Alta demanda de agua subterránea. Severo impacto ambiental por cambio de uso de suelo.' },
+            { id: 'jitomate', name: 'Jitomate', category: 'frutas', icon: '🍅', water100g: 21.4, water1kg: 214, cal: 18, prot: 0.9, carb: 3.9, fat: 0.2, sodio: 5, desc: 'Muy eficiente en volumen de producción por litro de agua en cultivos tecnificados.' },
+            { id: 'lechuga', name: 'Lechuga', category: 'frutas', icon: '🥬', water100g: 23.7, water1kg: 237, cal: 15, prot: 1.4, carb: 2.9, fat: 0.2, sodio: 28, desc: 'Baja huella hídrica general pero alta huella gris por agroquímicos.' },
+            { id: 'papa', name: 'Papa', category: 'frutas', icon: '🥔', water100g: 28.7, water1kg: 287, cal: 77, prot: 2.0, carb: 17.5, fat: 0.1, sodio: 6, desc: 'Tubérculo de alto rendimiento nutricional con huella hídrica eficiente.' },
+
+            // Granos y Semillas
+            { id: 'arroz', name: 'Arroz Blanco', category: 'granos', icon: '🍚', water100g: 249.7, water1kg: 2497, cal: 130, prot: 2.7, carb: 28.2, fat: 0.3, sodio: 1, desc: 'Cultivo por inundación con altísima evaporación y huella de agua azul.' },
+            { id: 'maiz', name: 'Maíz', category: 'granos', icon: '🌽', water100g: 122.2, water1kg: 1222, cal: 86, prot: 3.2, carb: 19.0, fat: 1.2, sodio: 15, desc: 'Base alimenticia de Mesoamérica. Principalmente agua verde (de lluvia).' },
+            { id: 'frijol', name: 'Frijol Negro', category: 'granos', icon: '🫘', water100g: 505.3, water1kg: 5053, cal: 132, prot: 8.9, carb: 23.7, fat: 0.5, sodio: 2, desc: 'Leguminosa rica en proteína. Alta huella acumulada por largo periodo vegetativo.' },
+            { id: 'almendra', name: 'Almendra', category: 'granos', icon: '🫘', water100g: 1609.5, water1kg: 16095, cal: 579, prot: 21.2, carb: 21.7, fat: 49.9, sodio: 1, desc: 'Extremadamente alta demanda de agua por fruto de árbol perenne.' },
+            { id: 'cacahuate', name: 'Cacahuate', category: 'granos', icon: '🥜', water100g: 397.4, water1kg: 3974, cal: 567, prot: 25.8, carb: 16.1, fat: 49.2, sodio: 18, desc: 'Semilla oleaginosa con huella moderada-alta por procesado posterior.' },
+
+            // Proteínas y Lácteos
+            { id: 'huevo', name: 'Huevo', category: 'proteinas', icon: '🥚', water100g: 326.5, water1kg: 3265, cal: 155, prot: 12.6, carb: 1.1, fat: 10.6, sodio: 124, desc: 'Incluye la huella hídrica del alimento balanceado consumido por las aves.' },
+            { id: 'pollo', name: 'Pechuga de Pollo', category: 'proteinas', icon: '🍗', water100g: 432.5, water1kg: 4325, cal: 165, prot: 31.0, carb: 0.0, fat: 3.6, sodio: 74, desc: 'Proteína eficiente en conversión biológica comparada con rumiantes.' },
+            { id: 'carne_res', name: 'Carne de Res', category: 'proteinas', icon: '🥩', water100g: 1541.5, water1kg: 15415, cal: 250, prot: 26.0, carb: 0.0, fat: 15.0, sodio: 72, desc: 'Cúspide de la huella hídrica: requiere miles de litros en pastos, forraje y vida del ganado.' },
+            { id: 'leche', name: 'Leche Entera', category: 'proteinas', icon: '🥛', water100g: 102.0, water1kg: 1020, cal: 61, prot: 3.2, carb: 4.8, fat: 3.3, sodio: 43, desc: 'Subproducto vacuno con impacto directo en forraje irrigado y consumo directo.' },
+            { id: 'queso', name: 'Queso Cheddar', category: 'proteinas', icon: '🧀', water100g: 506.0, water1kg: 5060, cal: 403, prot: 24.9, carb: 1.3, fat: 33.1, sodio: 621, desc: 'Concentrado lácteo: se requieren cerca de 10 litros de leche para 1kg de queso.' },
+
+            // Procesados y Bebidas
+            { id: 'pan', name: 'Pan Blanco', category: 'procesados', icon: '🍞', water100g: 160.8, water1kg: 1608, cal: 265, prot: 9.0, carb: 49.0, fat: 3.2, sodio: 491, desc: 'Derivado del trigo industrial con etapas de molienda y horneado.' },
+            { id: 'pasta', name: 'Pasta Seca', category: 'procesados', icon: '🍝', water100g: 184.9, water1kg: 1849, cal: 131, prot: 5.0, carb: 25.0, fat: 1.1, sodio: 6, desc: 'Requiere agua de cultivo de trigo duro y posterior deshidratación industrial.' },
+            { id: 'chocolate', name: 'Chocolate con Leche', category: 'procesados', icon: '🍫', water100g: 1719.6, water1kg: 17196, cal: 535, prot: 7.6, carb: 59.4, fat: 29.7, sodio: 79, desc: 'Sumatoria de cultivo de cacao, azúcares y sólidos de leche.' },
+            { id: 'refresco', name: 'Refresco de Cola', category: 'procesados', icon: '🥤', water100g: 48.0, water1kg: 480, cal: 38, prot: 0.0, carb: 10.6, fat: 0.0, sodio: 4, desc: 'Agua empleada en el lavado de botellas, jarabes de alta fructosa y procesos.' },
+            { id: 'jugo', name: 'Jugo de Naranja (Envase)', category: 'procesados', icon: '🧃', water100g: 101.8, water1kg: 1018, cal: 45, prot: 0.7, carb: 10.4, fat: 0.2, sodio: 1, desc: 'Concentrado industrial que duplica la huella de la fruta natural fresca.' }
+        ];
+
+        // 2. Global State Simulation Engine
+        const GameState = {
+            day: 1,
+            aquiferLevel: 10000, // Liters remaining
+            maxAquifer: 10000,
+            populationHealth: 100, // Percentage
+            ecoConsciousness: 100, // Eco points
+            climateFactor: 1.0, // 1.0 Normal, 1.5 Heatwave
+            climateType: 'normal', // 'normal', 'heatwave', 'rain'
+            climateDaysLeft: 0,
+            soundEnabled: true,
+            selectedCategory: 'all',
+            searchQuery: '',
+            telemetryLog: [],
+            
+            // Audio Web Audio API Context
+            audioCtx: null,
+
+            // Particles & Canvas Visual Objects
+            particles: [],
+            filtrationDrops: [],
+            clouds: [],
+            trees: [],
+            villagers: [],
+            waves: []
+        };
+
+        // 3. Audio Synthesis Engine (No external MP3 files needed)
+        function initAudio() {
+            if (!GameState.audioCtx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                GameState.audioCtx = new AudioCtx();
+            }
+        }
+
+        function playSound(type) {
+            if (!GameState.soundEnabled) return;
+            try {
+                initAudio();
+                const ctx = GameState.audioCtx;
+                if (ctx.state === 'suspended') ctx.resume();
+
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                const now = ctx.currentTime;
+
+                if (type === 'consume') {
+                    // Water drop / bubble sound
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.12);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.13);
+                } else if (type === 'warning') {
+                    // Low aquifer alert sound
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.setValueAtTime(120, now + 0.1);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.26);
+                } else if (type === 'rain') {
+                    // Rain splash sound
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(300, now + 0.3);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.31);
+                }
+            } catch (e) {
+                console.log('Audio playback prevented', e);
+            }
+        }
+
+        // 4. Interactive 2D Canvas Hydrological Engine
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            initCanvasEntities();
+        }
+
+        // Initialize Background Entities (Clouds, Trees, Villagers)
+        function initCanvasEntities() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Clouds
+            GameState.clouds = [];
+            for (let i = 0; i < 5; i++) {
+                GameState.clouds.push({
+                    x: Math.random() * w,
+                    y: 20 + Math.random() * (h * 0.15),
+                    radius: 20 + Math.random() * 25,
+                    speed: 0.2 + Math.random() * 0.4
+                });
+            }
+
+            // Trees
+            GameState.trees = [];
+            const groundY = h * 0.48;
+            for (let i = 0; i < 7; i++) {
+                GameState.trees.push({
+                    x: (w * 0.1) + (i * (w * 0.12)) + (Math.random() * 20),
+                    y: groundY,
+                    size: 25 + Math.random() * 15
+                });
+            }
+
+            // Villagers (NPCs)
+            GameState.villagers = [];
+            for (let i = 0; i < 8; i++) {
+                GameState.villagers.push({
+                    x: (w * 0.15) + (Math.random() * (w * 0.7)),
+                    y: groundY,
+                    speed: (Math.random() - 0.5) * 0.6,
+                    bobOffset: Math.random() * Math.PI * 2,
+                    state: 'happy', // happy, stressed, thirsty, collapsed
+                    speechBubble: null,
+                    speechTimer: 0
+                });
+            }
+
+            // Water Waves Sine Parameters
+            GameState.waves = [
+                { length: 0.015, amplitude: 6, speed: 0.04, offset: 0 },
+                { length: 0.02, amplitude: 4, speed: 0.02, offset: 2 }
+            ];
+        }
+
+        // Render Loop
+        let animationFrameId;
+        function renderCanvas(timestamp) {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Calculate Land Health Ratio (0.0 arid to 1.0 lush)
+            const waterRatio = Math.max(0, GameState.aquiferLevel / GameState.maxAquifer);
+
+            // A. Sky & Atmosphere Background Gradient
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.48);
+            if (GameState.climateType === 'heatwave') {
+                skyGrad.addColorStop(0, '#451a03'); // Amber dark heat sky
+                skyGrad.addColorStop(1, '#9a3412');
+            } else if (waterRatio < 0.2) {
+                skyGrad.addColorStop(0, '#1c1917'); // Dark desolate sky
+                skyGrad.addColorStop(1, '#44403c');
+            } else {
+                skyGrad.addColorStop(0, '#0284c7'); // Vibrant blue sky
+                skyGrad.addColorStop(1, '#38bdf8');
+            }
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, w, h * 0.48);
+
+            // Glowing Sun / Heat Effect
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(w * 0.85, h * 0.15, GameState.climateType === 'heatwave' ? 45 : 30, 0, Math.PI * 2);
+            ctx.fillStyle = GameState.climateType === 'heatwave' ? '#f97316' : '#fef08a';
+            ctx.shadowColor = GameState.climateType === 'heatwave' ? '#ea580c' : '#fde047';
+            ctx.shadowBlur = GameState.climateType === 'heatwave' ? 40 : 20;
+            ctx.fill();
+            ctx.restore();
+
+            // B. Moving Clouds
+            ctx.fillStyle = GameState.climateType === 'heatwave' ? 'rgba(254, 215, 170, 0.4)' : 'rgba(255, 255, 255, 0.75)';
+            GameState.clouds.forEach(cloud => {
+                cloud.x += cloud.speed;
+                if (cloud.x - cloud.radius > w) cloud.x = -cloud.radius;
+
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.radius, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.radius * 0.6, cloud.y - cloud.radius * 0.2, cloud.radius * 0.7, 0, Math.PI * 2);
+                ctx.arc(cloud.x - cloud.radius * 0.6, cloud.y - cloud.radius * 0.1, cloud.radius * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // C. Ground / Soil Layer (Color shifts according to water availability)
+            const groundY = h * 0.48;
+            let soilColor;
+            if (waterRatio > 0.6) {
+                soilColor = '#15803d'; // Lush green
+            } else if (waterRatio > 0.3) {
+                soilColor = '#ca8a04'; // Dry yellow/brown
+            } else {
+                soilColor = '#78350f'; // Arid cracked brown
+            }
+
+            ctx.fillStyle = soilColor;
+            ctx.fillRect(0, groundY, w, h * 0.12);
+
+            // Soil Cracks if water is low
+            if (waterRatio < 0.35) {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.lineWidth = 1.5;
+                for (let i = 0; i < w; i += 40) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, groundY + 5);
+                    ctx.lineTo(i + 10, groundY + 25);
+                    ctx.lineTo(i + 5, groundY + 40);
+                    ctx.stroke();
+                }
+            }
+
+            // D. Vegetation / Trees
+            GameState.trees.forEach(tree => {
+                // Trunk
+                ctx.fillStyle = '#451a03';
+                ctx.fillRect(tree.x - 3, tree.y - tree.size * 0.6, 6, tree.size * 0.6);
+
+                // Leaves
+                if (waterRatio > 0.25) {
+                    ctx.fillStyle = waterRatio > 0.6 ? '#16a34a' : '#a16207';
+                    ctx.beginPath();
+                    ctx.arc(tree.x, tree.y - tree.size * 0.8, tree.size * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            // E. Villagers (Animated NPCs)
+            const bob = Math.sin(timestamp * 0.005) * 2;
+            GameState.villagers.forEach(npc => {
+                npc.x += npc.speed;
+                if (npc.x < 30 || npc.x > w - 30) npc.speed *= -1;
+
+                // Update NPC Emotional State
+                if (waterRatio > 0.6) npc.state = 'happy';
+                else if (waterRatio > 0.3) npc.state = 'stressed';
+                else if (waterRatio > 0.1) npc.state = 'thirsty';
+                else npc.state = 'collapsed';
+
+                ctx.save();
+                ctx.translate(npc.x, npc.y - 12 + (npc.state === 'collapsed' ? 8 : bob));
+
+                if (npc.state === 'collapsed') {
+                    // Collapsed villager
+                    ctx.fillStyle = '#f87171';
+                    ctx.fillRect(-8, 8, 16, 5);
+                    ctx.beginPath();
+                    ctx.arc(-8, 8, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Body
+                    ctx.fillStyle = npc.state === 'happy' ? '#38bdf8' : (npc.state === 'stressed' ? '#fbbf24' : '#ef4444');
+                    ctx.fillRect(-4, -10, 8, 12);
+
+                    // Head
+                    ctx.fillStyle = '#fde047';
+                    ctx.beginPath();
+                    ctx.arc(0, -14, 5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Expression Emoji over head if thirsty
+                    if (npc.state === 'thirsty') {
+                        ctx.font = '10px sans-serif';
+                        ctx.fillText('💧', -4, -22);
+                    } else if (npc.state === 'stressed') {
+                        ctx.font = '10px sans-serif';
+                        ctx.fillText('⚠️', -4, -22);
+                    }
+                }
+                ctx.restore();
+            });
+
+            // F. Subterranean Aquifer Water Level Engine
+            const aquiferTop = h * 0.60;
+            const maxAquiferHeight = h * 0.38;
+            const currentAquiferHeight = maxAquiferHeight * waterRatio;
+            const waterSurfaceY = h - currentAquiferHeight;
+
+            // Deep Earth Rock Background
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, aquiferTop, w, h - aquiferTop);
+
+            // Water Waves Drawing with Sine Math
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(0, h);
+            ctx.lineTo(0, waterSurfaceY);
+
+            for (let x = 0; x <= w; x += 10) {
+                let yWave = waterSurfaceY;
+                GameState.waves.forEach(wave => {
+                    yWave += Math.sin(x * wave.length + timestamp * 0.003 + wave.offset) * wave.amplitude;
+                });
+                ctx.lineTo(x, yWave);
+            }
+
+            ctx.lineTo(w, h);
+            ctx.closePath();
+
+            // Aquifer Water Gradient (Blue to Dark Cyan)
+            let waterGrad = ctx.createLinearGradient(0, waterSurfaceY, 0, h);
+            if (waterRatio > 0.4) {
+                waterGrad.addColorStop(0, 'rgba(14, 165, 233, 0.85)');
+                waterGrad.addColorStop(1, 'rgba(3, 105, 161, 0.95)');
+            } else {
+                waterGrad.addColorStop(0, 'rgba(239, 68, 68, 0.85)'); // Red warning aquifer
+                waterGrad.addColorStop(1, 'rgba(153, 27, 27, 0.95)');
+            }
+            ctx.fillStyle = waterGrad;
+            ctx.fill();
+            ctx.restore();
+
+            // G. Animated Filtration Drops & Bubbles Particles
+            // Filtration Drops
+            for (let i = GameState.filtrationDrops.length - 1; i >= 0; i--) {
+                const drop = GameState.filtrationDrops[i];
+                drop.y += drop.speed;
+                drop.speed += 0.1; // gravity
+
+                ctx.fillStyle = drop.color || '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(drop.x, drop.y, drop.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Hit water surface
+                if (drop.y >= waterSurfaceY) {
+                    // Create splash bubbles
+                    for (let b = 0; b < 3; b++) {
+                        GameState.particles.push({
+                            x: drop.x + (Math.random() - 0.5) * 10,
+                            y: waterSurfaceY + Math.random() * 5,
+                            radius: 1.5 + Math.random() * 2,
+                            speedY: -0.5 - Math.random(),
+                            alpha: 1
+                        });
+                    }
+                    GameState.filtrationDrops.splice(i, 1);
+                }
+            }
+
+            // Rising Bubbles inside Aquifer
+            if (Math.random() < 0.2) {
+                GameState.particles.push({
+                    x: Math.random() * w,
+                    y: h - 5,
+                    radius: 1 + Math.random() * 2.5,
+                    speedY: -0.4 - Math.random() * 0.6,
+                    alpha: 0.7
+                });
+            }
+
+            for (let i = GameState.particles.length - 1; i >= 0; i--) {
+                const p = GameState.particles[i];
+                p.y += p.speedY;
+                p.alpha -= 0.005;
+
+                ctx.fillStyle = `rgba(224, 242, 254, ${p.alpha})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (p.y <= waterSurfaceY || p.alpha <= 0) {
+                    GameState.particles.splice(i, 1);
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(renderCanvas);
+        }
+
+        // Trigger Filtration Drops Animation when food is consumed
+        function triggerFiltrationEffect(waterExtracted) {
+            const count = Math.min(25, Math.max(5, Math.floor(waterExtracted / 40)));
+            const w = canvas.width;
+            const isHighFootprint = waterExtracted > 400;
+
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    GameState.filtrationDrops.push({
+                        x: Math.random() * w,
+                        y: canvas.height * 0.48,
+                        radius: 2 + Math.random() * 3,
+                        speed: 1 + Math.random() * 2,
+                        color: isHighFootprint ? '#f87171' : '#38bdf8'
+                    });
+                }, i * 40);
+            }
+        }
+
+        // 5. UI Render & Dynamic Cards Engine
+        function renderFoodCards() {
+            const grid = document.getElementById('food-grid');
+            grid.innerHTML = '';
+
+            const filtered = FOOD_DATASET.filter(food => {
+                const matchesCat = GameState.selectedCategory === 'all' || food.category === GameState.selectedCategory;
+                const matchesSearch = food.name.toLowerCase().includes(GameState.searchQuery.toLowerCase()) || 
+                                      food.desc.toLowerCase().includes(GameState.searchQuery.toLowerCase());
+                return matchesCat && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full p-8 text-center text-slate-500 font-mono text-xs">
+                        <i class="fa-solid fa-filter-circle-xmark text-2xl mb-2 text-slate-600"></i>
+                        <p>No se encontraron alimentos en esta categoría.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(food => {
+                const card = document.createElement('div');
+                card.className = 'glass-card p-3 rounded-2xl flex flex-col justify-between relative group cursor-pointer border border-slate-800';
+                
+                // Color accent based on footprint severity
+                const isExtreme = food.water100g > 500;
+                const isModerate = food.water100g > 150 && food.water100g <= 500;
+                const badgeColor = isExtreme ? 'bg-red-950/80 text-red-300 border-red-800/60' : (isModerate ? 'bg-amber-950/80 text-amber-300 border-amber-800/60' : 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60');
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700/60 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition">
+                                ${food.icon}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-xs text-slate-100 group-hover:text-cyan-300 transition">${food.name}</h4>
+                                <span class="text-[10px] text-slate-400 font-mono">100g / 100ml</span>
+                            </div>
+                        </div>
+
+                        <button data-info="${food.id}" class="btn-info p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition">
+                            <i class="fa-solid fa-circle-info text-xs"></i>
+                        </button>
+                    </div>
+
+                    <!-- Water Footprint Display -->
+                    <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                        <div>
+                            <span class="text-[9px] text-slate-400 uppercase font-mono tracking-wider block">Huella Hídrica</span>
+                            <span class="font-mono font-bold text-sm text-cyan-400">${(food.water100g * GameState.climateFactor).toFixed(1)} L</span>
+                        </div>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full border font-mono font-semibold ${badgeColor}">
+                            ${food.water100g > 500 ? 'Alta' : (food.water100g > 150 ? 'Media' : 'Baja')}
+                        </span>
+                    </div>
+
+                    <!-- Action Button -->
+                    <button data-consume="${food.id}" class="btn-consume mt-2.5 w-full py-1.5 rounded-xl bg-slate-800 hover:bg-cyan-600 hover:text-slate-950 text-slate-200 text-xs font-semibold font-mono transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-utensils text-[10px]"></i>
+                        <span>Consumir</span>
+                    </button>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            // Bind Info Buttons
+            document.querySelectorAll('.btn-info').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const foodId = btn.getAttribute('data-info');
+                    openFoodModal(foodId);
+                });
+            });
+
+            // Bind Consume Buttons
+            document.querySelectorAll('.btn-consume').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const foodId = btn.getAttribute('data-consume');
+                    consumeFood(foodId);
+                });
+            });
+        }
+
+        // 6. Food Consumption & Hydrological Simulation Calculation
+        function consumeFood(foodId) {
+            const food = FOOD_DATASET.find(f => f.id === foodId);
+            if (!food) return;
+
+            // Calculate actual water extracted with climate multiplier
+            const waterExtracted = food.water100g * GameState.climateFactor;
+            
+            // Deduct Water
+            GameState.aquiferLevel = Math.max(0, GameState.aquiferLevel - waterExtracted);
+
+            // Calculate Health & Eco Impact
+            if (food.water100g > 500) {
+                GameState.ecoConsciousness = Math.max(0, GameState.ecoConsciousness - 5);
+            } else if (food.water100g < 100) {
+                GameState.ecoConsciousness = Math.min(200, GameState.ecoConsciousness + 3);
+            }
+
+            // Health gains based on protein & carbs balance
+            GameState.populationHealth = Math.min(100, GameState.populationHealth + (food.prot > 2 ? 2 : 1));
+
+            // Advance Day
+            GameState.day += 1;
+
+            // Check Climate Random Events Every 5 Days
+            checkClimateEvents();
+
+            // Trigger Animation & Sound
+            triggerFiltrationEffect(waterExtracted);
+            playSound('consume');
+
+            // Log Telemetry Data for Thesis
+            logTelemetry(food, waterExtracted);
+
+            // Update HUD
+            updateHUD();
+        }
+
+        // Climate Event Engine
+        function checkClimateEvents() {
+            if (GameState.climateDaysLeft > 0) {
+                GameState.climateDaysLeft--;
+                if (GameState.climateDaysLeft === 0) {
+                    // Reset to normal climate
+                    GameState.climateType = 'normal';
+                    GameState.climateFactor = 1.0;
+                    document.getElementById('heatOverlay').classList.add('opacity-0');
+                    document.getElementById('rainOverlay').classList.add('opacity-0');
+                    document.getElementById('event-toast').classList.add('hidden');
+                }
+            } else {
+                // 15% Chance of Heatwave
+                if (Math.random() < 0.18 && GameState.day > 3) {
+                    GameState.climateType = 'heatwave';
+                    GameState.climateFactor = 1.5;
+                    GameState.climateDaysLeft = 3;
+                    document.getElementById('heatOverlay').classList.remove('opacity-0');
+                    showToast('OLA DE CALOR: +50% EN HUELLA HÍDRICA');
+                    playSound('warning');
+                }
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('event-toast');
+            const msgSpan = document.getElementById('event-toast-msg');
+            msgSpan.textContent = message;
+            toast.classList.remove('hidden');
+        }
+
+        // Telemetry Logging Function
+        function logTelemetry(food, waterExtracted) {
+            const logEntry = {
+                day: GameState.day,
+                foodName: food.name,
+                waterExtracted: waterExtracted.toFixed(1),
+                aquiferLevel: GameState.aquiferLevel.toFixed(1),
+                populationHealth: GameState.populationHealth,
+                climateFactor: GameState.climateFactor
+            };
+            GameState.telemetryLog.push(logEntry);
+            updateTelemetryTable();
+        }
+
+        function updateTelemetryTable() {
+            const tbody = document.getElementById('telemetry-tbody');
+            document.getElementById('log-count').textContent = GameState.telemetryLog.length;
+
+            tbody.innerHTML = GameState.telemetryLog.slice(-20).reverse().map(log => `
+                <tr class="hover:bg-slate-900/80 transition">
+                    <td class="p-2.5 font-bold text-cyan-400">#${log.day}</td>
+                    <td class="p-2.5 font-semibold text-slate-200">${log.foodName}</td>
+                    <td class="p-2.5 text-red-300 font-mono">-${log.waterExtracted} L</td>
+                    <td class="p-2.5 text-cyan-300 font-mono">${log.aquiferLevel} L</td>
+                    <td class="p-2.5 text-emerald-300 font-mono">${log.populationHealth}%</td>
+                    <td class="p-2.5 text-amber-300 font-mono">${log.climateFactor}x</td>
+                </tr>
+            `).join('');
+        }
+
+        // Update HUD Elements
+        function updateHUD() {
+            document.getElementById('hud-day').textContent = GameState.day;
+            document.getElementById('hud-water-val').textContent = Math.round(GameState.aquiferLevel).toLocaleString();
+            document.getElementById('hud-health-val').textContent = GameState.populationHealth + '%';
+            document.getElementById('hud-eco-val').textContent = GameState.ecoConsciousness + ' pts';
+
+            // Aquifer Progress Bar Width & Color
+            const pct = Math.max(0, (GameState.aquiferLevel / GameState.maxAquifer) * 100);
+            const bar = document.getElementById('aquifer-bar');
+            bar.style.width = pct + '%';
+            if (pct < 25) {
+                bar.className = 'h-full bg-gradient-to-r from-red-600 to-amber-600 rounded-full transition-all duration-500 relative';
+            } else {
+                bar.className = 'h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full transition-all duration-500 relative';
+            }
+
+            // Climate Badge
+            const climateText = document.getElementById('hud-climate-text');
+            if (GameState.climateType === 'heatwave') {
+                climateText.textContent = `Ola de Calor (${GameState.climateDaysLeft}d)`;
+                climateText.className = 'text-amber-400 font-bold';
+            } else {
+                climateText.textContent = 'Templado (Normal)';
+                climateText.className = 'text-emerald-400 font-medium';
+            }
+
+            // Re-render food cards to update multipliers if climate changed
+            renderFoodCards();
+        }
+
+        // 7. Modals & Telemetry CSV Export
+        function openFoodModal(foodId) {
+            const food = FOOD_DATASET.find(f => f.id === foodId);
+            if (!food) return;
+
+            document.getElementById('modal-food-title').textContent = food.name;
+            document.getElementById('modal-food-icon').textContent = food.icon;
+            document.getElementById('modal-water-100g').textContent = `${(food.water100g * GameState.climateFactor).toFixed(1)} L / 100g`;
+            document.getElementById('modal-water-1kg').textContent = `${(food.water1kg * GameState.climateFactor).toFixed(0)} L / kg`;
+            document.getElementById('modal-cal').textContent = `${food.cal} kcal`;
+            document.getElementById('modal-prot').textContent = `${food.prot} g`;
+            document.getElementById('modal-carb').textContent = `${food.carb} g`;
+            document.getElementById('modal-fat').textContent = `${food.fat} g`;
+            document.getElementById('modal-sodio').textContent = `${food.sodio} mg`;
+            document.getElementById('modal-description').textContent = food.desc;
+
+            // Bind consume button in modal
+            const modalConsumeBtn = document.getElementById('modal-btn-consume');
+            modalConsumeBtn.onclick = () => {
+                consumeFood(food.id);
+                document.getElementById('modal-food-info').classList.add('hidden');
+                document.getElementById('modal-food-info').classList.remove('flex');
+            };
+
+            const modal = document.getElementById('modal-food-info');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // Export Telemetry Log to CSV
+        function exportTelemetryCSV() {
+            if (GameState.telemetryLog.length === 0) {
+                alert('No hay registros de telemetría para exportar.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,Dia,Alimento,AguaExtraida_L,NivelAcuifero_L,SaludPoblacional,FactorClima\n";
+            GameState.telemetryLog.forEach(log => {
+                csvContent += `${log.day},"${log.foodName}",${log.waterExtracted},${log.aquiferLevel},${log.populationHealth},${log.climateFactor}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `telemetria_huella_oculta_uam_dia_${GameState.day}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 8. Event Listeners & System Boot
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            renderFoodCards();
+            updateHUD();
+
+            // Start Canvas Render Loop
+            requestAnimationFrame(renderCanvas);
+
+            // Category Filter Buttons
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.cat-btn').forEach(b => {
+                        b.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition shrink-0';
+                    });
+                    btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 transition shrink-0';
+                    GameState.selectedCategory = btn.getAttribute('data-cat');
+                    renderFoodCards();
+                });
+            });
+
+            // Search Filter Input
+            document.getElementById('food-search').addEventListener('input', (e) => {
+                GameState.searchQuery = e.target.value;
+                renderFoodCards();
+            });
+
+            // Modal Close Buttons
+            document.getElementById('close-food-modal').addEventListener('click', () => {
+                const modal = document.getElementById('modal-food-info');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            });
+
+            document.getElementById('btn-telemetry-modal').addEventListener('click', () => {
+                const modal = document.getElementById('modal-telemetry');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            });
+
+            document.getElementById('close-telemetry-modal').addEventListener('click', () => {
+                const modal = document.getElementById('modal-telemetry');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            });
+
+            // Export CSV
+            document.getElementById('btn-export-csv').addEventListener('click', exportTelemetryCSV);
+
+            // Trigger Manual Rain
+            document.getElementById('btn-trigger-rain').addEventListener('click', () => {
+                GameState.aquiferLevel = Math.min(GameState.maxAquifer, GameState.aquiferLevel + 500);
+                playSound('rain');
+                updateHUD();
+            });
+
+            // Audio Toggle
+            document.getElementById('btn-audio-toggle').addEventListener('click', () => {
+                GameState.soundEnabled = !GameState.soundEnabled;
+                const icon = document.getElementById('audio-icon');
+                if (GameState.soundEnabled) {
+                    icon.className = 'fa-solid fa-volume-high text-cyan-400';
+                } else {
+                    icon.className = 'fa-solid fa-volume-xmark text-slate-500';
+                }
+            });
+
+            // Restart Simulation
+            document.getElementById('btn-restart').addEventListener('click', () => {
+                GameState.day = 1;
+                GameState.aquiferLevel = 10000;
+                GameState.populationHealth = 100;
+                GameState.ecoConsciousness = 100;
+                GameState.climateFactor = 1.0;
+                GameState.climateType = 'normal';
+                GameState.telemetryLog = [];
+                updateTelemetryTable();
+                updateHUD();
+            });
+
+            // Resize Listener
+            window.addEventListener('resize', resizeCanvas);
+        });
+    </script>
 </body>
 </html>
