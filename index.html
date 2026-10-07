@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Huella Oculta: Simulador Hidrológico</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div id="app">
+    <!-- BARRA SUPERIOR INSTITUCIONAL -->
+    <header class="header-mobile">
+      <div class="brand">
+        <span class="uam-badge">UAM-L</span>
+        <h1>HUELLA OCULTA</h1>
+      </div>
+      <div class="day-badge">Día <span id="ui-dia">1</span></div>
+    </header>
+
+    <!-- ALERTA DINÁMICA DE CLIMA -->
+    <div id="clima-banner" class="clima-banner hidden">
+      <span id="clima-icono">☀️</span>
+      <span id="clima-texto">Ola de calor detectada. Evapotranspiración +50%</span>
+    </div>
+
+    <!-- HUD / RECURSOS CLAVE -->
+    <section class="hud-container">
+      <div class="stat-card">
+        <div class="stat-label">❤️ Salud Poblacional</div>
+        <div class="progress-bar"><div id="bar-salud" class="fill fill-salud" style="width: 100%;"></div></div>
+        <div class="stat-value" id="val-salud">100%</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">💧 Acuífero Subterráneo</div>
+        <div class="progress-bar"><div id="bar-agua" class="fill fill-agua" style="width: 100%;"></div></div>
+        <div class="stat-value" id="val-agua">15,000 L</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">🌱 Conciencia Eco</div>
+        <div class="progress-bar"><div id="bar-eco" class="fill fill-eco" style="width: 0%;"></div></div>
+        <div class="stat-value" id="val-eco">0 pts</div>
+      </div>
+    </section>
+
+    <!-- ESCENARIO DINÁMICO 2D -->
+    <section id="viewport" class="fase-prospero">
+      <div class="sky-layer"></div>
+      <div class="sun-moon"></div>
+      
+      <!-- Capa de Aldeanos con Globos -->
+      <div class="poblacion-layer">
+        <div class="npc" id="npc-1">
+          <div class="speech-bubble" id="bubble-1">¡Buen clima!</div>
+          <div class="sprite">🧑‍🌾</div>
+        </div>
+        <div class="npc" id="npc-2">
+          <div class="speech-bubble" id="bubble-2">Agua limpia</div>
+          <div class="sprite">👩‍🎨</div>
+        </div>
+        <div class="npc" id="npc-3">
+          <div class="speech-bubble" id="bubble-3">¡Cuidemos el pozo!</div>
+          <div class="sprite">👶</div>
+        </div>
+      </div>
+
+      <!-- Representación del Manto Freático -->
+      <div class="acuifero-container">
+        <div id="nivel-agua" class="agua-fluid"></div>
+        <div class="suelo-layer"></div>
+        <span class="capa-label">Nivel Freático Profundo</span>
+      </div>
+    </section>
+
+    <!-- CONTROLES TÁCTILES Y MENÚ -->
+    <section class="controls-section">
+      <nav class="category-tabs">
+        <button class="tab-btn active" data-cat="carnicos">🥩 Carnes</button>
+        <button class="tab-btn" data-cat="vegetales">🫘 Vegetales</button>
+        <button class="tab-btn" data-cat="procesados">🍔 Procesados</button>
+        <button class="tab-btn" data-cat="bebidas">🥤 Bebidas</button>
+        <button class="tab-btn tab-tech" data-cat="tecnologias">⚡ Tech</button>
+      </nav>
+
+      <div id="cards-grid" class="cards-grid">
+        <!-- Renderizado dinámico vía JavaScript -->
+      </div>
+    </section>
+
+    <!-- MODAL DE REVELACIÓN Y TELEMETRÍA DE TESIS -->
+    <div id="modal-conclusion" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h2 id="modal-titulo">COLAPSO HÍDRICO ALCANZADO</h2>
+        <p class="modal-subtitle">Resultados de la simulación hidrológica:</p>
+
+        <div class="metrics-grid">
+          <div class="metric"><span>Días Sobrevividos:</span> <strong id="m-días">0</strong></div>
+          <div class="metric"><span>Extracción Total:</span> <strong id="m-agua">0 L</strong></div>
+          <div class="metric"><span>Equivalente Tinacos (1,100L):</span> <strong id="m-tinacos">0</strong></div>
+          <div class="metric"><span>Puntos de Conciencia:</span> <strong id="m-eco">0 pts</strong></div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="btn-exportar-csv" class="btn-secondary">📊 Descargar Telemetría (CSV)</button>
+          <button id="btn-reiniciar" class="btn-primary">🔄 Reiniciar Simulador</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
